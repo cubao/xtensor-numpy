@@ -7,7 +7,7 @@ all:
 .PHONY: all
 
 clean:
-	rm -rf build
+	rm -rf build dist
 .PHONY: clean
 
 PYTHON ?= python3
@@ -20,7 +20,9 @@ python_wheel:
 	$(PYTHON) -m pip wheel . -w build --verbose
 python_sdist:
 	$(PYTHON) -m build --sdist
-.PHONY: build python_install python_wheel python_sdist
+test_install:
+	python3 -m pip install dist/pocket_numpy-*.tar.gz --force-reinstall
+.PHONY: build python_install python_wheel python_sdist test_install
 
 test:
 	build/pocketpy.exe tests/test_numpy.py

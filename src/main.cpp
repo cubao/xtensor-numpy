@@ -40,6 +40,11 @@ int main(int argc, char** argv) {
     const char* arg2 = NULL;
 
     for(int i = 1; i < argc; i++) {
+        if(strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
+            printf("Usage: pocketpy [--profile] [--debug] [--compile] filename\n");
+            printf("       pocketpy --help\n");
+            return 1;
+        }
         if(strcmp(argv[i], "--profile") == 0) {
             profile = true;
             continue;
