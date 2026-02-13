@@ -1,9 +1,9 @@
 all:
-    @echo nothing special
+	@echo nothing special
 .PHONY: all
 
 clean:
-    rm -rf build
+	rm -rf build
 .PHONY: clean
 
 build:

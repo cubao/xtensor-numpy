@@ -6,8 +6,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Build pocketpy as a shared library via add_subdirectory
-set(PK_BUILD_SHARED_LIB ON CACHE BOOL "" FORCE)
+set(PK_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
 set(PK_BUILD_STATIC_LIB OFF CACHE BOOL "" FORCE)
+set(PK_BUILD_STATIC_MAIN ON CACHE BOOL "" FORCE)
 add_subdirectory(pocketpy)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/pocketpy/include")
