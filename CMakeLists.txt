@@ -10,11 +10,15 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-# Build pocketpy as a shared library via add_subdirectory
-set(PK_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
-set(PK_BUILD_STATIC_LIB OFF CACHE BOOL "" FORCE)
-set(PK_BUILD_STATIC_MAIN ON CACHE BOOL "" FORCE)
+# add_subdirectory(3rd/lz4)
+# add_subdirectory(3rd/msgpack)
+set(PK_BUILD_MODULE_MSGPACK ON)
+set(PK_BUILD_MODULE_LZ4 ON)
+set(PK_BUILD_SHARED_LIB ON)
 add_subdirectory(pocketpy)
+add_executable(pocketpy_cli pocketpy/src2/main.c)
+set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME repl)
+target_link_libraries(pocketpy_cli pocketpy)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/pocketpy/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
@@ -49,3 +53,5 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 # Link numpy with pocketpy
 target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
 
+add_executable(test_numpy tests/test_numpy.cpp)
+target_link_libraries(test_numpy pocketpy ${PROJECT_NAME})
