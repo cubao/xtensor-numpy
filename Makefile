@@ -12,4 +12,4 @@ build:
 .PHONY: build
 
 test:
-	build/test_numpy tests/test_numpy.py
+	build/pocketpy tests/test_numpy.py
