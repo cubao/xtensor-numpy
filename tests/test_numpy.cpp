@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <exception>
+#include <iostream>
 #include "pocketpy/pocketpy.h"
 
 extern "C" bool py_module_initialize();
@@ -42,7 +44,7 @@ int main(int argc, char **argv) {
         int code = ok ? 0 : 1;
         py_finalize();
         return code;
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         // Catch and print other C++ exceptions
         std::cerr << "C++ exception: " << e.what() << std::endl;
         return 1;
