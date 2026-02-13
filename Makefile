@@ -10,3 +10,6 @@ build:
 	cmake -B build -DCMAKE_BUILD_TYPE=Release
 	cmake --build build --config Release
 .PHONY: build
+
+test:
+	build/test_numpy tests/test_numpy.py

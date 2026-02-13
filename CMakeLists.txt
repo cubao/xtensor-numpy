@@ -17,7 +17,7 @@ set(PK_BUILD_MODULE_LZ4 ON)
 set(PK_BUILD_STATIC_LIB ON)
 add_subdirectory(pocketpy)
 add_executable(pocketpy_cli pocketpy/src2/main.c)
-set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME pocketpy)
+set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME repl)
 target_link_libraries(pocketpy_cli pocketpy)
 
 include_directories("${CMAKE_CURRENT_LIST_DIR}/pocketpy/include")
@@ -53,3 +53,5 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 # Link numpy with pocketpy
 target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
 
+add_executable(test_numpy tests/test_numpy.cpp)
+target_link_libraries(test_numpy pocketpy ${PROJECT_NAME})

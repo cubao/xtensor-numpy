@@ -5,3 +5,7 @@ make build
 ```
 
 # How to test
+
+```
+make test
+```
