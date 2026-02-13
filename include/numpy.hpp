@@ -24,12 +24,12 @@
     #endif
 #endif
 
-#include <xtensor/xarray.hpp>
-#include <xtensor/xio.hpp>
-#include <xtensor/xmath.hpp>
-#include <xtensor/xrandom.hpp>
-#include <xtensor/xsort.hpp>
-#include <xtensor/xview.hpp>
+#include <xtensor/containers/xarray.hpp>
+#include <xtensor/io/xio.hpp>
+#include <xtensor/core/xmath.hpp>
+#include <xtensor/generators/xrandom.hpp>
+#include <xtensor/misc/xsort.hpp>
+#include <xtensor/views/xview.hpp>
 
 #ifdef SUPPRESS_XTENSOR_WARNINGS
     #ifdef _MSC_VER
