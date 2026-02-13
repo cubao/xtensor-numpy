@@ -48,16 +48,15 @@ namespace xt
     constexpr std::size_t newaxis_skip(std::size_t i);
 
     template <class S, class It>
-    inline auto get_slice_value(const S& slice, It& it) noexcept
+    inline disable_xslice<S, std::size_t> get_slice_value(const S& s, It&) noexcept
     {
-        if constexpr (is_xslice<S>::value)
-        {
-            return slice(typename S::size_type(*it));
-        }
-        else
-        {
-            return static_cast<std::size_t>(slice);
-        }
+        return static_cast<std::size_t>(s);
+    }
+
+    template <class S, class It>
+    inline auto get_slice_value(const xslice<S>& slice, It& it) noexcept
+    {
+        return slice.derived_cast()(typename S::size_type(*it));
     }
 
     /***********************
@@ -148,9 +147,6 @@ namespace xt
         struct is_newaxis<xnewaxis<T>> : public std::true_type
         {
         };
-
-        template <class T>
-        constexpr bool is_newaxis_v = is_newaxis<T>::value;
 
         template <class T, class... S>
         struct newaxis_count_impl

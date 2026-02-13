@@ -325,9 +325,9 @@ namespace xt
         explicit xfixed_container(const inner_shape_type& shape, layout_type l = L);
         explicit xfixed_container(const inner_shape_type& shape, value_type v, layout_type l = L);
 
-        template <class IX = std::integral_constant<std::size_t, N>>
-        xfixed_container(nested_initializer_list_t<value_type, N> t)
-            requires(IX::value != 0);
+        // remove this enable_if when removing the other value_type constructor
+        template <class IX = std::integral_constant<std::size_t, N>, class EN = std::enable_if_t<IX::value != 0, int>>
+        xfixed_container(nested_initializer_list_t<value_type, N> t);
 
         ~xfixed_container() = default;
 
@@ -380,6 +380,21 @@ namespace xt
 
         friend class xcontainer<xfixed_container<ET, S, L, SH, Tag>>;
     };
+
+#ifdef XTENSOR_HAS_CONSTEXPR_ENHANCED
+    // Out of line definitions to prevent linker errors prior to C++17
+    template <class ET, class S, layout_type L, bool SH, class Tag>
+    constexpr
+        typename xfixed_container<ET, S, L, SH, Tag>::inner_shape_type xfixed_container<ET, S, L, SH, Tag>::m_shape;
+
+    template <class ET, class S, layout_type L, bool SH, class Tag>
+    constexpr
+        typename xfixed_container<ET, S, L, SH, Tag>::inner_strides_type xfixed_container<ET, S, L, SH, Tag>::m_strides;
+
+    template <class ET, class S, layout_type L, bool SH, class Tag>
+    constexpr typename xfixed_container<ET, S, L, SH, Tag>::inner_backstrides_type
+        xfixed_container<ET, S, L, SH, Tag>::m_backstrides;
+#endif
 
     /****************************************
      * xfixed_container_adaptor declaration *
@@ -503,6 +518,21 @@ namespace xt
         friend class xcontainer<xfixed_adaptor<EC, S, L, SH, Tag>>;
     };
 
+#ifdef XTENSOR_HAS_CONSTEXPR_ENHANCED
+    // Out of line definitions to prevent linker errors prior to C++17
+    template <class EC, class S, layout_type L, bool SH, class Tag>
+    constexpr
+        typename xfixed_adaptor<EC, S, L, SH, Tag>::inner_shape_type xfixed_adaptor<EC, S, L, SH, Tag>::m_shape;
+
+    template <class EC, class S, layout_type L, bool SH, class Tag>
+    constexpr
+        typename xfixed_adaptor<EC, S, L, SH, Tag>::inner_strides_type xfixed_adaptor<EC, S, L, SH, Tag>::m_strides;
+
+    template <class EC, class S, layout_type L, bool SH, class Tag>
+    constexpr typename xfixed_adaptor<EC, S, L, SH, Tag>::inner_backstrides_type
+        xfixed_adaptor<EC, S, L, SH, Tag>::m_backstrides;
+#endif
+
     /************************************
      * xfixed_container implementation *
      ************************************/
@@ -609,9 +639,8 @@ namespace xt
      * Note: for clang < 3.8 this is an initializer_list and the size is not checked at compile-or runtime.
      */
     template <class ET, class S, layout_type L, bool SH, class Tag>
-    template <class IX>
+    template <class IX, class EN>
     inline xfixed_container<ET, S, L, SH, Tag>::xfixed_container(nested_initializer_list_t<value_type, N> t)
-        requires(IX::value != 0)
     {
         XTENSOR_ASSERT_MSG(
             detail::check_initializer_list_shape<N>::run(t, this->shape()) == true,

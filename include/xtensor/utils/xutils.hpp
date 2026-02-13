@@ -163,37 +163,52 @@ namespace xt
 
     namespace detail
     {
-        template <class F, size_t... I, class... Ts>
-        void for_each(F&& f, std::tuple<Ts...>& t, std::index_sequence<I...>) noexcept(
-            (noexcept(f(std::get<I>(t))) && ...)
-        )
+        template <std::size_t I, class F, class... T>
+        inline typename std::enable_if<I == sizeof...(T), void>::type
+        for_each_impl(F&& /*f*/, std::tuple<T...>& /*t*/) noexcept
         {
-            (f(std::get<I>(t)), ...);
         }
 
-        template <class F, size_t... I, class... Ts>
-        void for_each(F&& f, const std::tuple<Ts...>& t, std::index_sequence<I...>) noexcept(
-            (noexcept(f(std::get<I>(t))) && ...)
-        )
+        template <std::size_t I, class F, class... T>
+            inline typename std::enable_if < I<sizeof...(T), void>::type
+            for_each_impl(F&& f, std::tuple<T...>& t) noexcept(noexcept(f(std::get<I>(t))))
         {
-            (f(std::get<I>(t)), ...);
+            f(std::get<I>(t));
+            for_each_impl<I + 1, F, T...>(std::forward<F>(f), t);
         }
     }
 
-    template <class F, class... Ts>
-    inline void for_each(F&& f, std::tuple<Ts...>& t) noexcept(
-        noexcept(detail::for_each(std::forward<F>(f), t, std::make_index_sequence<sizeof...(Ts)>{}))
+    template <class F, class... T>
+    inline void for_each(F&& f, std::tuple<T...>& t) noexcept(
+        noexcept(detail::for_each_impl<0, F, T...>(std::forward<F>(f), t))
     )
     {
-        detail::for_each(std::forward<F>(f), t, std::make_index_sequence<sizeof...(Ts)>{});
+        detail::for_each_impl<0, F, T...>(std::forward<F>(f), t);
     }
 
-    template <class F, class... Ts>
-    inline void for_each(F&& f, const std::tuple<Ts...>& t) noexcept(
-        noexcept(detail::for_each(std::forward<F>(f), t, std::make_index_sequence<sizeof...(Ts)>{}))
+    namespace detail
+    {
+        template <std::size_t I, class F, class... T>
+        inline typename std::enable_if<I == sizeof...(T), void>::type
+        for_each_impl(F&& /*f*/, const std::tuple<T...>& /*t*/) noexcept
+        {
+        }
+
+        template <std::size_t I, class F, class... T>
+            inline typename std::enable_if < I<sizeof...(T), void>::type
+            for_each_impl(F&& f, const std::tuple<T...>& t) noexcept(noexcept(f(std::get<I>(t))))
+        {
+            f(std::get<I>(t));
+            for_each_impl<I + 1, F, T...>(std::forward<F>(f), t);
+        }
+    }
+
+    template <class F, class... T>
+    inline void for_each(F&& f, const std::tuple<T...>& t) noexcept(
+        noexcept(detail::for_each_impl<0, F, T...>(std::forward<F>(f), t))
     )
     {
-        detail::for_each(std::forward<F>(f), t, std::make_index_sequence<sizeof...(Ts)>{});
+        detail::for_each_impl<0, F, T...>(std::forward<F>(f), t);
     }
 
     /*****************************
@@ -204,27 +219,28 @@ namespace xt
 
     namespace detail
     {
-        template <class F, class R, class... T, size_t... I>
-        R accumulate_impl(F&& f, R init, const std::tuple<T...>& t, std::index_sequence<I...> /*I*/) noexcept(
-            (noexcept(f(init, std::get<I>(t))) && ...)
-        )
+        template <std::size_t I, class F, class R, class... T>
+        inline std::enable_if_t<I == sizeof...(T), R>
+        accumulate_impl(F&& /*f*/, R init, const std::tuple<T...>& /*t*/) noexcept
         {
-            R res = init;
-            auto wrapper = [&](const auto& i, const auto& j)
-            {
-                res = f(i, j);
-            };
-            (wrapper(res, std::get<I>(t)), ...);
-            return res;
+            return init;
+        }
+
+        template <std::size_t I, class F, class R, class... T>
+            inline std::enable_if_t < I<sizeof...(T), R>
+            accumulate_impl(F&& f, R init, const std::tuple<T...>& t) noexcept(noexcept(f(init, std::get<I>(t))))
+        {
+            R res = f(init, std::get<I>(t));
+            return accumulate_impl<I + 1, F, R, T...>(std::forward<F>(f), res, t);
         }
     }
 
     template <class F, class R, class... T>
     inline R accumulate(F&& f, R init, const std::tuple<T...>& t) noexcept(
-        noexcept(detail::accumulate_impl(std::forward<F>(f), init, t, std::make_index_sequence<sizeof...(T)>{}))
+        noexcept(detail::accumulate_impl<0, F, R, T...>(std::forward<F>(f), init, t))
     )
     {
-        return detail::accumulate_impl(std::forward<F>(f), init, t, std::make_index_sequence<sizeof...(T)>{});
+        return detail::accumulate_impl<0, F, R, T...>(std::forward<F>(f), init, t);
     }
 
     /// @endcond
@@ -267,30 +283,29 @@ namespace xt
      * apply implementation *
      ************************/
 
+    namespace detail
+    {
+        template <class R, class F, std::size_t I, class... S>
+        R apply_one(F&& func, const std::tuple<S...>& s) NOEXCEPT(noexcept(func(std::get<I>(s))))
+        {
+            return static_cast<R>(func(std::get<I>(s)));
+        }
+
+        template <class R, class F, std::size_t... I, class... S>
+        R apply(std::size_t index, F&& func, std::index_sequence<I...> /*seq*/, const std::tuple<S...>& s)
+            NOEXCEPT(noexcept(func(std::get<0>(s))))
+        {
+            using FT = std::add_pointer_t<R(F&&, const std::tuple<S...>&)>;
+            static const std::array<FT, sizeof...(I)> ar = {{&apply_one<R, F, I, S...>...}};
+            return ar[index](std::forward<F>(func), s);
+        }
+    }
+
     template <class R, class F, class... S>
     inline R apply(std::size_t index, F&& func, const std::tuple<S...>& s)
         NOEXCEPT(noexcept(func(std::get<0>(s))))
     {
-        XTENSOR_ASSERT(sizeof...(S) > index);
-        return std::apply(
-            [&](const S&... args) -> R
-            {
-                auto f_impl = [&](auto&& self, auto&& i, auto&& h, auto&&... t) -> R
-                {
-                    if (i == index)
-                    {
-                        return static_cast<R>(func(h));
-                    }
-                    if constexpr (sizeof...(t) > 0)
-                    {
-                        return self(self, std::size_t{i + 1}, t...);
-                    }
-                    return R{};
-                };
-                return f_impl(f_impl, std::size_t{0}, args...);
-            },
-            s
-        );
+        return detail::apply<R>(index, std::forward<F>(func), std::make_index_sequence<sizeof...(S)>(), s);
     }
 
     /***************************
@@ -518,6 +533,74 @@ namespace xt
         return std::get<I>(static_cast<const std::tuple<Args...>&>(v));
     }
 
+    /***************************
+     * apply_cv implementation *
+     ***************************/
+
+    namespace detail
+    {
+        template <
+            class T,
+            class U,
+            bool = std::is_const<std::remove_reference_t<T>>::value,
+            bool = std::is_volatile<std::remove_reference_t<T>>::value>
+        struct apply_cv_impl
+        {
+            using type = U;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T, U, true, false>
+        {
+            using type = const U;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T, U, false, true>
+        {
+            using type = volatile U;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T, U, true, true>
+        {
+            using type = const volatile U;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T&, U, false, false>
+        {
+            using type = U&;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T&, U, true, false>
+        {
+            using type = const U&;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T&, U, false, true>
+        {
+            using type = volatile U&;
+        };
+
+        template <class T, class U>
+        struct apply_cv_impl<T&, U, true, true>
+        {
+            using type = const volatile U&;
+        };
+    }
+
+    template <class T, class U>
+    struct apply_cv
+    {
+        using type = typename detail::apply_cv_impl<T, U>::type;
+    };
+
+    template <class T, class U>
+    using apply_cv_t = typename apply_cv<T, U>::type;
+
     /**************************
      * to_array implementation *
      ***************************/
@@ -570,9 +653,6 @@ namespace xt
     {
     };
 
-    template <class E>
-    concept has_data_interface_concept = has_data_interface<E>::value;
-
     template <class E, class = void>
     struct has_strides : std::false_type
     {
@@ -593,9 +673,6 @@ namespace xt
     {
     };
 
-    template <class E>
-    concept has_iterator_interface_concept = has_iterator_interface<E>::value;
-
     /******************************
      * is_iterator implementation *
      ******************************/
@@ -613,9 +690,6 @@ namespace xt
         : std::true_type
     {
     };
-
-    template <typename E>
-    concept iterator_concept = is_iterator<E>::value;
 
     /********************************************
      * xtrivial_default_construct implemenation *
@@ -786,9 +860,6 @@ namespace xt
     {
     };
 
-    template <class E1, class E2>
-    constexpr bool has_assign_to_v = has_assign_to<E1, E2>::value;
-
     /*************************************
      * overlapping_memory_checker_traits *
      *************************************/
@@ -802,11 +873,6 @@ namespace xt
     struct has_memory_address<T, void_t<decltype(std::addressof(*std::declval<T>().begin()))>> : std::true_type
     {
     };
-
-    template <typename T>
-    concept with_memory_address_concept = has_memory_address<std::decay_t<T>>::value;
-    template <typename T>
-    concept without_memory_address_concept = !has_memory_address<std::decay_t<T>>::value;
 
     struct memory_range
     {
