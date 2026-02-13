@@ -1,5 +1,17 @@
-cmake_minimum_required(VERSION 3.10)
-project(numpy)
+cmake_minimum_required(VERSION 3.15...3.26)
+
+if(NOT DEFINED SKBUILD_PROJECT_NAME)
+  set(SKBUILD_PROJECT_NAME "pocket_numpy")
+endif()
+if(NOT DEFINED PROJECT_VERSION)
+  set(PROJECT_VERSION "dev")
+endif()
+
+# https://scikit-build-core.readthedocs.io/en/latest/cmakelists.html#accessing-information
+project(
+  ${SKBUILD_PROJECT_NAME}
+  VERSION ${SKBUILD_PROJECT_VERSION}
+  LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -9,6 +21,11 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+# std::visit requires macOS 10.14+
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.14")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum macOS deployment version" FORCE)
+endif()
 
 # set(CMAKE_BUILD_TYPE "Debug")
 if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
@@ -51,14 +68,25 @@ if(NOT SHOW_XTENSOR_WARNINGS)
 endif()
 
 # Create numpy static library
-add_library(${PROJECT_NAME} STATIC src/numpy.cpp)
+add_library(numpy STATIC src/numpy.cpp)
 
 # Define PY_DYNAMIC_MODULE for numpy
-target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
+target_compile_definitions(numpy PRIVATE PY_DYNAMIC_MODULE)
 
 # Link numpy with pocketpy
-target_link_libraries(${PROJECT_NAME} PUBLIC pocketpy)
+target_link_libraries(numpy PUBLIC pocketpy)
 
 add_executable(pocketpy_cli src/main.cpp)
 set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME pocketpy)
-target_link_libraries(pocketpy_cli ${PROJECT_NAME})
+set_target_properties(pocketpy_cli PROPERTIES SUFFIX ".exe")
+target_link_libraries(pocketpy_cli numpy)
+install(TARGETS pocketpy_cli DESTINATION ${PROJECT_NAME})
+
+# https://scikit-build-core.readthedocs.io/en/latest/getting_started.html
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(pybind11 CONFIG REQUIRED)
+
+python_add_library(_core MODULE src/pybind.cpp WITH_SOABI)
+target_link_libraries(_core PRIVATE pybind11::headers)
+target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
+install(TARGETS _core DESTINATION ${PROJECT_NAME})

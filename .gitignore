@@ -34,3 +34,6 @@
 build/
 .cache
 profiler_report.json
+__pycache__/
+*.pyc
+dist
