@@ -57,8 +57,8 @@ add_library(${PROJECT_NAME} STATIC src/numpy.cpp)
 target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 
 # Link numpy with pocketpy
-target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
+target_link_libraries(${PROJECT_NAME} PUBLIC pocketpy)
 
 add_executable(pocketpy_cli src/main.cpp)
 set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME pocketpy)
-target_link_libraries(pocketpy_cli pocketpy ${PROJECT_NAME})
+target_link_libraries(pocketpy_cli ${PROJECT_NAME})
