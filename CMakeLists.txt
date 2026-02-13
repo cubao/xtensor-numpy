@@ -56,10 +56,11 @@ if(NOT SHOW_XTENSOR_WARNINGS)
     endif()
 endif()
 
-# Add numpy source and test files
+# Add numpy source files (exclude main.cpp which is used for the repl executable)
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
+list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp)
 
-# Create numpy dynamic library
+# Create numpy static library
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 # Define PY_DYNAMIC_MODULE for numpy
@@ -68,7 +69,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 # Link numpy with pocketpy
 target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
 
-add_executable(pocketpy_cli pocketpy/src2/main.c)
+add_executable(pocketpy_cli src/main.cpp)
 set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME repl)
 target_link_libraries(pocketpy_cli pocketpy ${PROJECT_NAME})
 
