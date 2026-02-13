@@ -4,10 +4,19 @@ project(numpy)
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-# Include pybind11 and numpy
-set(POCKETPY_DIR "${CMAKE_CURRENT_LIST_DIR}/pocketpy/")
-include_directories("${POCKETPY_DIR}/include")
+# Build pocketpy as a shared library via add_subdirectory
+set(PK_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
+set(PK_BUILD_STATIC_LIB OFF CACHE BOOL "" FORCE)
+set(PK_BUILD_STATIC_MAIN ON CACHE BOOL "" FORCE)
+add_subdirectory(pocketpy)
+
+include_directories("${CMAKE_CURRENT_LIST_DIR}/pocketpy/include")
 include_directories("${CMAKE_CURRENT_LIST_DIR}/include")
 
 # Control xtensor warnings (OFF by default)
@@ -38,17 +47,5 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 
 # Link numpy with pocketpy
-if(WIN32)
-    target_link_libraries(
-        ${PROJECT_NAME}
-        PRIVATE
-        ${POCKETPY_DIR}/build/Release/pocketpy.lib
-    )
-else()
-    target_link_libraries(
-        ${PROJECT_NAME}
-        PRIVATE
-        ${POCKETPY_DIR}/build/libpocketpy.so
-    )
-endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
 
