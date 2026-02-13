@@ -14,6 +14,8 @@ PYBIND11_MODULE(_core, m)
             -   https://github.com/pocketpy/xtensor-numpy
     )pbdoc";
 
+    // TODO, bind pocketpy repl, debugging, profiling, etc.
+
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
 #else
