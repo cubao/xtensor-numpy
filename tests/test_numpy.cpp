@@ -1,42 +1,47 @@
-#include <pybind11/embed.h>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include "pocketpy/pocketpy.h"
 
-namespace py = pybind11;
+extern "C" bool py_module_initialize();
 
 int main(int argc, char **argv) {
-    if (argc < 1) {
-        std::cerr << "Usage:\n\t" << argv[0] << " <path/to/script.py>" << std::endl;
+    if (argc < 2) {
+        fprintf(stderr, "Usage:\n\t%s <path/to/script.py>\n", argv[0]);
         return -1;
     }
     try {
-        // Initialize the Python interpreter
-        py::scoped_interpreter guard{};
+        py_initialize();
+        py_sys_setargv(argc, argv);
 
-        // Path to the script
-        const std::string script_path = argv[1];
+        // Register the numpy module (linked into this binary)
+        py_module_initialize();
 
-        // Open the script file
-        std::ifstream file(script_path);
-        if (!file.is_open()) {
-            std::cerr << "Could not open " << script_path << " script file." << std::endl;
+        // Read the script file
+        const char* filename = argv[1];
+        FILE* f = fopen(filename, "rb");
+        if (!f) {
+            fprintf(stderr, "Could not open '%s'\n", filename);
+            py_finalize();
             return 1;
         }
+        fseek(f, 0, SEEK_END);
+        long size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        char* data = (char*)malloc(size + 1);
+        size = fread(data, 1, size, f);
+        data[size] = 0;
+        fclose(f);
 
-        // Read and execute the script into a string
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        std::string script = buffer.str();
-        py::exec(script);
-        std::cout << "Numpy script executed successfully." << std::endl;
-    }
-    catch (const py::python_error& e) {
-        // Catch and print Python exceptions
-        std::cerr << "Python error: " << e.what() << std::endl;
-        return 1;
-    }
+        // Execute the script
+        bool ok = py_exec(data, filename, EXEC_MODE, NULL);
+        if (!ok) {
+            py_printexc();
+        }
+
+        free(data);
+        int code = ok ? 0 : 1;
+        py_finalize();
+        return code;
     catch (const std::exception& e) {
         // Catch and print other C++ exceptions
         std::cerr << "C++ exception: " << e.what() << std::endl;

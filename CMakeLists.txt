@@ -53,5 +53,5 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PY_DYNAMIC_MODULE)
 # Link numpy with pocketpy
 target_link_libraries(${PROJECT_NAME} PRIVATE pocketpy)
 
-add_executable(test_numpy tests/test_numpy.cpp)
-target_link_libraries(test_numpy pocketpy ${PROJECT_NAME})
+add_executable(test_numpy tests/test_numpy.cpp ${SOURCES})
+target_link_libraries(test_numpy pocketpy)
