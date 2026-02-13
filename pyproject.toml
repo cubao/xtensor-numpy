@@ -3,9 +3,9 @@ requires = ["scikit-build-core>=0.3.3", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "cubao_tippecanoe"
-version = "0.0.3"
-description = "standalone tippecanoe"
+name = "pocket_numpy"
+version = "0.0.1"
+description = "pocketpy with numpy"
 readme = "README.md"
 authors = [
   { name = "tzx", email = "dvorak4tzx@gmail.com" },
@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/cubao/cubao-tippecanoe"
+Homepage = "https://github.com/cubao/xtensor-numpy"
 
 [project.optional-dependencies]
 test = ["pytest"]
