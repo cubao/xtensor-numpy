@@ -23,4 +23,4 @@ python_sdist:
 .PHONY: build python_install python_wheel python_sdist
 
 test:
-	build/pocketpy tests/test_numpy.py
+	build/pocketpy.exe tests/test_numpy.py

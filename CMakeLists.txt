@@ -73,7 +73,9 @@ target_link_libraries(numpy PUBLIC pocketpy)
 
 add_executable(pocketpy_cli src/main.cpp)
 set_target_properties(pocketpy_cli PROPERTIES OUTPUT_NAME pocketpy)
+set_target_properties(pocketpy_cli PROPERTIES SUFFIX ".exe")
 target_link_libraries(pocketpy_cli numpy)
+install(TARGETS pocketpy_cli DESTINATION ${PROJECT_NAME})
 
 # https://scikit-build-core.readthedocs.io/en/latest/getting_started.html
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
