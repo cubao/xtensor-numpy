@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>xtensor-numpy WASM</title>
+  <title>pocket-numpy</title>
   <style>
     body {
       font-family: monospace;
@@ -12,7 +12,7 @@
       margin: 20px;
     }
     h1 { color: #569cd6; margin-bottom: 12px; }
-    #status { color: #dcdcaa; margin-bottom: 10px; }
+    #status { color: #dcdcaa; margin-bottom: 10px; padding-top: 30px; }
     #editor {
       width: 100%;
       min-height: 400px;
@@ -56,11 +56,12 @@
   </style>
 </head>
 <body>
-  <h1>xtensor-numpy WASM</h1>
-  <div id="status">Loading WASM module...</div>
+  <h1>pocket-numpy</h1>
+  GitHub: <a href="https://github.com/cubao/xtensor-numpy" style="color: #ffff00; text-decoration: none;" target="_blank">cubao/xtensor-numpy</a>
   <textarea id="editor" spellcheck="false"></textarea>
   <br>
   <button id="run-btn" disabled>Run</button>
+  <div id="status">Loading WASM module...</div>
   <pre id="output"></pre>
 
   <script src="test_numpy.js"></script>
@@ -93,10 +94,14 @@
         outputEl.textContent += text + '\n';
       };
 
+      var t0 = performance.now();
+
       var ok = Module.ccall(
         'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
         [editorEl.value, 'main.py', 0, 0]
       );
+
+      var elapsed = (performance.now() - t0).toFixed(3);
 
       if (!ok) {
         Module.ccall('py_printexc', null, [], []);
@@ -104,11 +109,11 @@
       }
 
       if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
-        statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span>';
+        statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span> (' + elapsed + ' ms)';
       } else if (!ok) {
-        statusEl.innerHTML = '<span class="fail">ERROR</span>';
+        statusEl.innerHTML = '<span class="fail">ERROR</span> (' + elapsed + ' ms)';
       } else {
-        statusEl.textContent = 'Done';
+        statusEl.textContent = 'Done (' + elapsed + ' ms)';
       }
     }
 
