@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>xtensor-numpy WASM Test</title>
+  <title>xtensor-numpy WASM</title>
   <style>
     body {
       font-family: monospace;
@@ -11,14 +11,44 @@
       color: #d4d4d4;
       margin: 20px;
     }
-    h1 { color: #569cd6; }
+    h1 { color: #569cd6; margin-bottom: 12px; }
     #status { color: #dcdcaa; margin-bottom: 10px; }
+    #editor {
+      width: 100%;
+      min-height: 400px;
+      background-color: #282a36;
+      color: #f8f8f2;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      tab-size: 4;
+      resize: vertical;
+    }
+    #run-btn {
+      margin-top: 8px;
+      padding: 6px 24px;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    #run-btn:hover { background-color: #0056b3; }
+    #run-btn:active { background-color: #004085; transform: translateY(1px); }
+    #run-btn:disabled { background-color: #555; cursor: not-allowed; }
     #output {
+      margin-top: 10px;
       background-color: #282a36;
       padding: 15px;
       border-radius: 6px;
       white-space: pre-wrap;
-      min-height: 100px;
+      min-height: 50px;
       line-height: 1.4;
     }
     .pass { color: #4ec9b0; font-weight: bold; }
@@ -26,48 +56,81 @@
   </style>
 </head>
 <body>
-  <h1>xtensor-numpy WASM Test Runner</h1>
+  <h1>xtensor-numpy WASM</h1>
   <div id="status">Loading WASM module...</div>
+  <textarea id="editor" spellcheck="false"></textarea>
+  <br>
+  <button id="run-btn" disabled>Run</button>
   <pre id="output"></pre>
 
   <script src="test_numpy.js"></script>
   <script>
+    var editorEl = document.getElementById('editor');
     var outputEl = document.getElementById('output');
     var statusEl = document.getElementById('status');
-    var allOutput = '';
+    var runBtn = document.getElementById('run-btn');
+    var ready = false;
+
+    // Fill editor with bundled test source
+    editorEl.value = TEST_SOURCE;
+
+    // Tab key inserts a tab instead of moving focus
+    editorEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var s = this.selectionStart, end = this.selectionEnd;
+        this.value = this.value.substring(0, s) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = s + 4;
+      }
+    });
+
+    function runCode() {
+      if (!ready) return;
+      outputEl.textContent = '';
+      var allOutput = '';
+      Module._print_buf = function (text) {
+        allOutput += text + '\n';
+        outputEl.textContent += text + '\n';
+      };
+
+      Module.ccall('py_initialize', null, [], []);
+      Module.ccall('py_module_initialize', 'boolean', [], []);
+
+      var ok = Module.ccall(
+        'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
+        [editorEl.value, 'main.py', 0, 0]
+      );
+
+      if (!ok) {
+        Module.ccall('py_printexc', null, [], []);
+        Module.ccall('py_clearexc', null, ['number'], [0]);
+      }
+
+      Module.ccall('py_finalize', null, [], []);
+
+      if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
+        statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span>';
+      } else if (!ok) {
+        statusEl.innerHTML = '<span class="fail">ERROR</span>';
+      } else {
+        statusEl.textContent = 'Done';
+      }
+    }
+
+    runBtn.onclick = runCode;
 
     var Module = {
       onRuntimeInitialized: function () {
-        statusEl.textContent = 'Running tests...';
-
-        Module.ccall('py_initialize', null, [], []);
-        Module.ccall('py_module_initialize', 'boolean', [], []);
-
-        var ok = Module.ccall(
-          'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
-          [TEST_SOURCE, 'test_numpy.py', 0, 0]
-        );
-
-        if (!ok) {
-          Module.ccall('py_printexc', null, [], []);
-          Module.ccall('py_clearexc', null, ['number'], [0]);
-        }
-
-        Module.ccall('py_finalize', null, [], []);
-
-        if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
-          statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span>';
-        } else {
-          statusEl.innerHTML = '<span class="fail">TESTS FAILED</span>';
-        }
+        ready = true;
+        runBtn.disabled = false;
+        statusEl.textContent = 'Ready';
+        runCode();
       },
       print: function (text) {
-        allOutput += text + '\n';
-        outputEl.textContent += text + '\n';
+        if (Module._print_buf) Module._print_buf(text);
       },
       printErr: function (text) {
-        allOutput += text + '\n';
-        outputEl.textContent += text + '\n';
+        if (Module._print_buf) Module._print_buf(text);
       }
     };
   </script>
