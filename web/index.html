@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xtensor-numpy WASM Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      margin: 20px;
+    }
+    h1 { color: #569cd6; }
+    #status { color: #dcdcaa; margin-bottom: 10px; }
+    #output {
+      background-color: #282a36;
+      padding: 15px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      min-height: 100px;
+      line-height: 1.4;
+    }
+    .pass { color: #4ec9b0; font-weight: bold; }
+    .fail { color: #f44747; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>xtensor-numpy WASM Test Runner</h1>
+  <div id="status">Loading WASM module...</div>
+  <pre id="output"></pre>
+
+  <script src="test_numpy.js"></script>
+  <script>
+    var outputEl = document.getElementById('output');
+    var statusEl = document.getElementById('status');
+    var allOutput = '';
+
+    var Module = {
+      onRuntimeInitialized: function () {
+        statusEl.textContent = 'Running tests...';
+
+        Module.ccall('py_initialize', null, [], []);
+        Module.ccall('py_module_initialize', 'boolean', [], []);
+
+        var ok = Module.ccall(
+          'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
+          [TEST_SOURCE, 'test_numpy.py', 0, 0]
+        );
+
+        if (!ok) {
+          Module.ccall('py_printexc', null, [], []);
+          Module.ccall('py_clearexc', null, ['number'], [0]);
+        }
+
+        Module.ccall('py_finalize', null, [], []);
+
+        if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
+          statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span>';
+        } else {
+          statusEl.innerHTML = '<span class="fail">TESTS FAILED</span>';
+        }
+      },
+      print: function (text) {
+        allOutput += text + '\n';
+        outputEl.textContent += text + '\n';
+      },
+      printErr: function (text) {
+        allOutput += text + '\n';
+        outputEl.textContent += text + '\n';
+      }
+    };
+  </script>
+  <script src="lib/pocketpy.js"></script>
+</body>
+</html>

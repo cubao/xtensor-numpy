@@ -26,3 +26,11 @@ test_install:
 
 test:
 	build/pocketpy.exe tests/test_numpy.py
+
+build_wasm:
+	bash build_wasm.sh
+.PHONY: build_wasm
+
+serve_wasm:
+	cd web && python3 -m http.server 8080
+.PHONY: serve_wasm
