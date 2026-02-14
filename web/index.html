@@ -93,9 +93,6 @@
         outputEl.textContent += text + '\n';
       };
 
-      Module.ccall('py_initialize', null, [], []);
-      Module.ccall('py_module_initialize', 'boolean', [], []);
-
       var ok = Module.ccall(
         'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
         [editorEl.value, 'main.py', 0, 0]
@@ -105,8 +102,6 @@
         Module.ccall('py_printexc', null, [], []);
         Module.ccall('py_clearexc', null, ['number'], [0]);
       }
-
-      Module.ccall('py_finalize', null, [], []);
 
       if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
         statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span>';
@@ -121,6 +116,8 @@
 
     var Module = {
       onRuntimeInitialized: function () {
+        Module.ccall('py_initialize', null, [], []);
+        Module.ccall('py_module_initialize', 'boolean', [], []);
         ready = true;
         runBtn.disabled = false;
         statusEl.textContent = 'Ready';
