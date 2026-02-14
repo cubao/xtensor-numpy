@@ -6,8 +6,8 @@ if [ ! -f pocketpy/src/common/_generated.c ]; then
 fi
 
 # Create output directory
-rm -rf web/lib
-mkdir -p web/lib
+rm -rf docs/lib
+mkdir -p docs/lib
 
 # Generate test_numpy.js from test source
 python3 -c "
@@ -15,7 +15,7 @@ import json
 with open('tests/test_numpy.py') as f:
     src = f.read()
 print('var TEST_SOURCE = ' + json.dumps(src) + ';')
-" > web/test_numpy.js
+" > docs/test_numpy.js
 
 # Common flags
 DEFINES="-DPK_ENABLE_OS=0 -DPK_ENABLE_THREADS=0 -DPK_ENABLE_DETERMINISM=0 \
@@ -51,8 +51,8 @@ em++ "$TMPDIR/pocketpy.o" \
     -sALLOW_MEMORY_GROWTH=1 \
     -sSTACK_SIZE=1048576 \
     $WARNINGS \
-    -o web/lib/pocketpy.js
+    -o docs/lib/pocketpy.js
 
 rm -rf "$TMPDIR"
 
-echo "Build complete: web/lib/pocketpy.js, web/lib/pocketpy.wasm"
+echo "Build complete: docs/lib/pocketpy.js, docs/lib/pocketpy.wasm"
