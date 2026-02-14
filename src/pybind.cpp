@@ -1,11 +1,10 @@
 #include <pybind11/pybind11.h>
-#include <pybind11/eigen.h>
+// #include <pybind11/eigen.h>
+// #include "rdp.hpp"
 
 #define STRINGIFY(x) #x
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
-namespace py = pybind11;
-using namespace pybind11::literals;
 
 PYBIND11_MODULE(_core, m)
 {
@@ -19,6 +18,9 @@ PYBIND11_MODULE(_core, m)
     )pbdoc";
 
     // TODO, bind pocketpy repl, debugging, profiling, etc.
+    /*
+    namespace py = pybind11;
+    using namespace pybind11::literals;
 
     using namespace rdp;
     py::class_<LineSegment>(m, "LineSegment") //
@@ -80,6 +82,8 @@ PYBIND11_MODULE(_core, m)
         },
         rdp_mask_doc, "coords"_a, //
         py::kw_only(), "epsilon"_a = 0.0, "recursive"_a = true);
+
+    */
 
 #ifdef VERSION_INFO
     m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);
