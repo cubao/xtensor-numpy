@@ -32,5 +32,5 @@ build_wasm:
 .PHONY: build_wasm
 
 serve_wasm:
-	cd web && python3 -m http.server 8080
+	cd web && python3 -m http.server 8080 --bind 0.0.0.0
 .PHONY: serve_wasm
