@@ -13,19 +13,45 @@
     }
     h1 { color: #569cd6; margin-bottom: 12px; }
     #status { color: #dcdcaa; margin-bottom: 10px; padding-top: 30px; }
-    #editor {
+    .editor-container {
+      display: flex;
       width: 100%;
       min-height: 400px;
       background-color: #282a36;
-      color: #f8f8f2;
       border: 1px solid #444;
       border-radius: 6px;
+      position: relative;
+    }
+    .line-numbers {
+      width: 50px;
+      padding: 10px 8px 10px 5px;
+      background-color: #1e1e1e;
+      color: #858585;
+      text-align: right;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      border-right: 1px solid #444;
+      user-select: none;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      height: 100%;
+      box-sizing: border-box;
+      white-space: pre;
+    }
+    #editor {
+      flex: 1;
+      min-height: 400px;
+      background-color: #282a36;
+      color: #f8f8f2;
+      border: none;
       padding: 10px;
       font-family: monospace;
       font-size: 14px;
       line-height: 1.4;
       tab-size: 4;
-      resize: vertical;
+      resize: none;
+      outline: none;
     }
     #run-btn {
       margin-top: 8px;
@@ -58,7 +84,10 @@
 <body>
   <h1>pocket-numpy</h1>
   GitHub: <a href="https://github.com/cubao/xtensor-numpy" style="color: #ffff00; text-decoration: none;" target="_blank">cubao/xtensor-numpy</a>
-  <textarea id="editor" spellcheck="false"></textarea>
+  <div class="editor-container">
+    <div class="line-numbers" id="line-numbers">1</div>
+    <textarea id="editor" spellcheck="false"></textarea>
+  </div>
   <br>
   <button id="run-btn" disabled>Run</button>
   <div id="status">Loading WASM module...</div>
@@ -84,6 +113,61 @@
         this.selectionStart = this.selectionEnd = s + 4;
       }
     });
+
+    // Update line numbers
+    function updateLineNumbers() {
+      var lines = editorEl.value.split('\n');
+      var lineNumbers = '';
+      for (var i = 1; i <= lines.length; i++) {
+        lineNumbers += i + '\n';
+      }
+      // Remove trailing newline
+      lineNumbers = lineNumbers.replace(/\n$/, '');
+      document.getElementById('line-numbers').textContent = lineNumbers;
+    }
+
+    // Update line numbers on input and scroll
+    editorEl.addEventListener('input', function() {
+      updateLineNumbers();
+      syncLineNumbersHeight();
+    });
+    
+    editorEl.addEventListener('scroll', function() {
+      document.getElementById('line-numbers').scrollTop = this.scrollTop;
+    });
+
+    // Ensure line numbers height matches editor height
+    function syncLineNumbersHeight() {
+      var editorHeight = editorEl.scrollHeight;
+      document.getElementById('line-numbers').style.height = editorHeight + 'px';
+    }
+
+    // Initial line numbers and height sync
+    updateLineNumbers();
+    syncLineNumbersHeight();
+
+    // Sync height on window resize
+    window.addEventListener('resize', function() {
+      setTimeout(syncLineNumbersHeight, 100);
+    });
+
+    // Monitor editor changes for better synchronization
+    var observer = new MutationObserver(function() {
+      setTimeout(function() {
+        updateLineNumbers();
+        syncLineNumbersHeight();
+      }, 10);
+    });
+
+    // Observe changes to editor
+    if (window.MutationObserver) {
+      observer.observe(editorEl, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true
+      });
+    }
 
     function runCode() {
       if (!ready) return;
