@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pocket-numpy</title>
+  <style>
+    body {
+      font-family: monospace;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      margin: 20px;
+    }
+    h1 { color: #569cd6; margin-bottom: 12px; }
+    #status { color: #dcdcaa; margin-bottom: 10px; padding-top: 30px; }
+    .editor-container {
+      display: flex;
+      width: 100%;
+      min-height: 400px;
+      background-color: #282a36;
+      border: 1px solid #444;
+      border-radius: 6px;
+      position: relative;
+    }
+    .line-numbers {
+      width: 50px;
+      padding: 10px 8px 10px 5px;
+      background-color: #1e1e1e;
+      color: #858585;
+      text-align: right;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      border-right: 1px solid #444;
+      user-select: none;
+      overflow-y: hidden;
+      overflow-x: hidden;
+      height: 100%;
+      box-sizing: border-box;
+      white-space: pre;
+    }
+    #editor {
+      flex: 1;
+      min-height: 400px;
+      background-color: #282a36;
+      color: #f8f8f2;
+      border: none;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      tab-size: 4;
+      resize: none;
+      outline: none;
+    }
+    #run-btn {
+      margin-top: 8px;
+      padding: 6px 24px;
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+    #run-btn:hover { background-color: #0056b3; }
+    #run-btn:active { background-color: #004085; transform: translateY(1px); }
+    #run-btn:disabled { background-color: #555; cursor: not-allowed; }
+    #output {
+      margin-top: 10px;
+      background-color: #282a36;
+      padding: 15px;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      min-height: 50px;
+      line-height: 1.4;
+    }
+    .pass { color: #4ec9b0; font-weight: bold; }
+    .fail { color: #f44747; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>pocket-numpy</h1>
+  GitHub: <a href="https://github.com/cubao/xtensor-numpy" style="color: #ffff00; text-decoration: none;" target="_blank">cubao/xtensor-numpy</a>
+  <div class="editor-container">
+    <div class="line-numbers" id="line-numbers">1</div>
+    <textarea id="editor" spellcheck="false"></textarea>
+  </div>
+  <br>
+  <button id="run-btn" disabled>Run</button>
+  <div id="status">Loading WASM module...</div>
+  <pre id="output"></pre>
+
+  <script src="test_numpy.js"></script>
+  <script>
+    var editorEl = document.getElementById('editor');
+    var outputEl = document.getElementById('output');
+    var statusEl = document.getElementById('status');
+    var runBtn = document.getElementById('run-btn');
+    var ready = false;
+
+    // Fill editor with bundled test source
+    editorEl.value = TEST_SOURCE;
+
+    // Tab key inserts a tab instead of moving focus
+    editorEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        var s = this.selectionStart, end = this.selectionEnd;
+        this.value = this.value.substring(0, s) + '    ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = s + 4;
+      }
+    });
+
+    // Update line numbers
+    function updateLineNumbers() {
+      var lines = editorEl.value.split('\n');
+      var lineNumbers = '';
+      for (var i = 1; i <= lines.length; i++) {
+        lineNumbers += i + '\n';
+      }
+      // Remove trailing newline
+      lineNumbers = lineNumbers.replace(/\n$/, '');
+      document.getElementById('line-numbers').textContent = lineNumbers;
+    }
+
+    // Update line numbers on input and scroll
+    editorEl.addEventListener('input', function() {
+      updateLineNumbers();
+      syncLineNumbersHeight();
+    });
+    
+    editorEl.addEventListener('scroll', function() {
+      document.getElementById('line-numbers').scrollTop = this.scrollTop;
+    });
+
+    // Ensure line numbers height matches editor height
+    function syncLineNumbersHeight() {
+      var editorHeight = editorEl.scrollHeight;
+      document.getElementById('line-numbers').style.height = editorHeight + 'px';
+    }
+
+    // Initial line numbers and height sync
+    updateLineNumbers();
+    syncLineNumbersHeight();
+
+    // Sync height on window resize
+    window.addEventListener('resize', function() {
+      setTimeout(syncLineNumbersHeight, 100);
+    });
+
+    // Monitor editor changes for better synchronization
+    var observer = new MutationObserver(function() {
+      setTimeout(function() {
+        updateLineNumbers();
+        syncLineNumbersHeight();
+      }, 10);
+    });
+
+    // Observe changes to editor
+    if (window.MutationObserver) {
+      observer.observe(editorEl, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true
+      });
+    }
+
+    function runCode() {
+      if (!ready) return;
+      outputEl.textContent = '';
+      var allOutput = '';
+      Module._print_buf = function (text) {
+        allOutput += text + '\n';
+        outputEl.textContent += text + '\n';
+      };
+
+      var t0 = performance.now();
+
+      var ok = Module.ccall(
+        'py_exec', 'boolean', ['string', 'string', 'number', 'number'],
+        [editorEl.value, 'main.py', 0, 0]
+      );
+
+      var elapsed = (performance.now() - t0).toFixed(3);
+
+      if (!ok) {
+        Module.ccall('py_printexc', null, [], []);
+        Module.ccall('py_clearexc', null, ['number'], [0]);
+      }
+
+      if (allOutput.indexOf('ALL TESTS PASSED') !== -1) {
+        statusEl.innerHTML = '<span class="pass">ALL TESTS PASSED</span> (' + elapsed + ' ms)';
+      } else if (!ok) {
+        statusEl.innerHTML = '<span class="fail">ERROR</span> (' + elapsed + ' ms)';
+      } else {
+        statusEl.textContent = 'Done (' + elapsed + ' ms)';
+      }
+    }
+
+    runBtn.onclick = runCode;
+
+    var Module = {
+      onRuntimeInitialized: function () {
+        Module.ccall('py_initialize', null, [], []);
+        Module.ccall('py_module_initialize', 'boolean', [], []);
+        ready = true;
+        runBtn.disabled = false;
+        statusEl.textContent = 'Ready';
+        runCode();
+      },
+      print: function (text) {
+        if (Module._print_buf) Module._print_buf(text);
+      },
+      printErr: function (text) {
+        if (Module._print_buf) Module._print_buf(text);
+      }
+    };
+  </script>
+  <script src="lib/pocketpy.js"></script>
+</body>
+</html>
