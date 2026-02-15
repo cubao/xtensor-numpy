@@ -3672,7 +3672,11 @@ PYBIND11_MODULE(numpy, m) {
     // Create pocket_numpy module that re-exports rdp/rdp_mask from numpy
     {
         py_GlobalRef pocket_numpy_mod = py_newmodule("pocket_numpy");
-        py_setattr(pocket_numpy_mod, py_name("rdp"), m.attr("rdp").ptr());
-        py_setattr(pocket_numpy_mod, py_name("rdp_mask"), m.attr("rdp_mask").ptr());
+        if (py_getattr(m.ptr(), py_name("rdp"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp"), py_retval());
+        }
+        if (py_getattr(m.ptr(), py_name("rdp_mask"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp_mask"), py_retval());
+        }
     }
 }
