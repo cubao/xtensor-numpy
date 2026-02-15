@@ -185,6 +185,9 @@
     });
 
     // Load initial file and set up editor
+    if (fileNames.indexOf('test_numpy.py') !== -1) {
+      fileSelect.value = 'test_numpy.py';
+    }
     loadSelectedFile();
 
     // Re-calc on window resize
