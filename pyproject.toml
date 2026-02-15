@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "pocket_numpy"
-version = "0.0.2"
+version = "0.0.3"
 description = "pocketpy with numpy"
 readme = "README.md"
 authors = [
