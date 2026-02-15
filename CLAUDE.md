@@ -68,6 +68,10 @@ Initializes pocketpy, registers the numpy module via `py_module_initialize()`, t
 - `pocketpy_cli` — CLI executable linked against numpy
 - `_core` — pybind11 module for RDP bindings
 
+## Git Policy
+
+- **NEVER use `git commit --amend`**. Always create a new commit instead. Amending rewrites history and can destroy previous work, especially after a failed pre-commit hook where `--amend` would silently modify the wrong commit.
+
 ## Key Conventions
 
 - C++17 required; C11 for pocketpy C sources
