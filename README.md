@@ -6,6 +6,10 @@ python3 -m pocket_numpy --help
 python3 -m pocket_numpy tests/test_numpy.py
 ```
 
+# Try is online
+
+<https://cubao.github.io/xtensor-numpy>
+
 ---
 
 # How to build (for dev)
