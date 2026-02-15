@@ -9,13 +9,16 @@ fi
 rm -rf docs/lib
 mkdir -p docs/lib
 
-# Generate test_numpy.js from test source
+# Generate test_sources.js from all test files
 python3 -c "
-import json
-with open('tests/test_numpy.py') as f:
-    src = f.read()
-print('var TEST_SOURCE = ' + json.dumps(src) + ';')
-" > docs/test_numpy.js
+import json, glob, os
+sources = {}
+for path in sorted(glob.glob('tests/*.py')):
+    name = os.path.basename(path)
+    with open(path) as f:
+        sources[name] = f.read()
+print('var TEST_SOURCES = ' + json.dumps(sources) + ';')
+" > docs/test_sources.js
 
 # Common flags
 DEFINES="-DPK_ENABLE_OS=0 -DPK_ENABLE_THREADS=0 -DPK_ENABLE_DETERMINISM=0 \

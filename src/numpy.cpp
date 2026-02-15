@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include <numpy.hpp>
 #include <typeinfo>
+#include "rdp.hpp"
 
 namespace py = pybind11;
 
@@ -2868,6 +2869,88 @@ void array_creation_registry(py::module_& m) {
     register_array_float<5>(m);
 }
 
+// --- RDP helpers: bridge ndarray/list <-> Eigen types ---
+
+// Helper: extract Nx2 or Nx3 Eigen matrix from ndarray_base
+static rdp::RowVectors ndarray_to_eigen(const ndarray_base& base, int& input_cols) {
+    int dims = base.ndim();
+    if (dims != 2) throw std::invalid_argument("rdp: expected 2D array");
+    auto shape_vec = base.shape();
+    int rows = shape_vec[0].cast<int>();
+    int cols = shape_vec[1].cast<int>();
+    if (cols != 2 && cols != 3) throw std::invalid_argument("rdp: expected Nx2 or Nx3 array");
+    input_cols = cols;
+
+    if (auto* p = dynamic_cast<const ndarray<float64>*>(&base)) {
+        const double* ptr = p->data.get_array().data();
+        if (cols == 3) {
+            return Eigen::Map<const rdp::RowVectors>(ptr, rows, 3);
+        } else {
+            rdp::RowVectors result(rows, 3);
+            result.setZero();
+            Eigen::Map<const rdp::RowVectorsNx2> map2(ptr, rows, 2);
+            result.leftCols(2) = map2;
+            return result;
+        }
+    }
+    if (auto* p = dynamic_cast<const ndarray<int_>*>(&base)) {
+        const int_* iptr = p->data.get_array().data();
+        rdp::RowVectors result(rows, 3);
+        result.setZero();
+        for (int i = 0; i < rows; ++i)
+            for (int j = 0; j < cols; ++j)
+                result(i, j) = static_cast<double>(iptr[i * cols + j]);
+        return result;
+    }
+    throw std::invalid_argument("rdp: unsupported ndarray dtype");
+}
+
+// Helper: convert vector<vector<double>> to Eigen Nx3 (zero-pad 2D to 3D)
+static rdp::RowVectors vec2d_to_eigen_d(const std::vector<std::vector<double>>& coords, int& input_cols) {
+    int rows = (int)coords.size();
+    if (rows == 0) throw std::invalid_argument("rdp: empty coords");
+    int cols = (int)coords[0].size();
+    if (cols != 2 && cols != 3) throw std::invalid_argument("rdp: expected Nx2 or Nx3");
+    input_cols = cols;
+    rdp::RowVectors result(rows, 3);
+    result.setZero();
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            result(i, j) = coords[i][j];
+    return result;
+}
+
+// Helper: convert vector<vector<int_>> to Eigen Nx3
+static rdp::RowVectors vec2d_to_eigen_i(const std::vector<std::vector<int_>>& coords, int& input_cols) {
+    int rows = (int)coords.size();
+    if (rows == 0) throw std::invalid_argument("rdp: empty coords");
+    int cols = (int)coords[0].size();
+    if (cols != 2 && cols != 3) throw std::invalid_argument("rdp: expected Nx2 or Nx3");
+    input_cols = cols;
+    rdp::RowVectors result(rows, 3);
+    result.setZero();
+    for (int i = 0; i < rows; ++i)
+        for (int j = 0; j < cols; ++j)
+            result(i, j) = static_cast<double>(coords[i][j]);
+    return result;
+}
+
+// Helper: Eigen RowVectors result -> ndarray_base (return Nx2 or Nx3)
+static std::unique_ptr<ndarray_base> eigen_to_ndarray(const rdp::RowVectors& mat, int output_cols) {
+    int N = (int)mat.rows();
+    std::vector<std::vector<double>> data(N, std::vector<double>(output_cols));
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < output_cols; ++j)
+            data[i][j] = mat(i, j);
+    return std::unique_ptr<ndarray_base>(new ndarray<float64>(data));
+}
+
+// Helper: Eigen VectorXi mask -> ndarray_base (1D int array)
+static std::unique_ptr<ndarray_base> mask_to_ndarray(const Eigen::VectorXi& mask) {
+    std::vector<int_> data(mask.size());
+    for (int i = 0; i < mask.size(); ++i) data[i] = mask[i];
+    return std::unique_ptr<ndarray_base>(new ndarray<int_>(data));
+}
 
 PYBIND11_MODULE(numpy, m) {
     m.doc() = "Python bindings for pkpy::numpy::ndarray using pybind11";
@@ -3535,4 +3618,65 @@ PYBIND11_MODULE(numpy, m) {
         py::arg("arr2"),
         py::arg("rtol") = 1e-5,
         py::arg("atol") = 1e-8);
+
+    // --- RDP bindings ---
+
+    // rdp from list<list<double>>
+    m.def("rdp", [](std::vector<std::vector<double>> coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = vec2d_to_eigen_d(coords, input_cols);
+        auto result = rdp::douglas_simplify(eigen_coords, epsilon, recursive);
+        return eigen_to_ndarray(result, input_cols);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // rdp from list<list<int>>
+    m.def("rdp", [](std::vector<std::vector<int_>> coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = vec2d_to_eigen_i(coords, input_cols);
+        auto result = rdp::douglas_simplify(eigen_coords, epsilon, recursive);
+        return eigen_to_ndarray(result, input_cols);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // rdp from ndarray
+    m.def("rdp", [](const ndarray_base& coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = ndarray_to_eigen(coords, input_cols);
+        auto result = rdp::douglas_simplify(eigen_coords, epsilon, recursive);
+        return eigen_to_ndarray(result, input_cols);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // rdp_mask from list<list<double>>
+    m.def("rdp_mask", [](std::vector<std::vector<double>> coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = vec2d_to_eigen_d(coords, input_cols);
+        auto mask = rdp::douglas_simplify_mask(eigen_coords, epsilon, recursive);
+        return mask_to_ndarray(mask);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // rdp_mask from list<list<int>>
+    m.def("rdp_mask", [](std::vector<std::vector<int_>> coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = vec2d_to_eigen_i(coords, input_cols);
+        auto mask = rdp::douglas_simplify_mask(eigen_coords, epsilon, recursive);
+        return mask_to_ndarray(mask);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // rdp_mask from ndarray
+    m.def("rdp_mask", [](const ndarray_base& coords, double epsilon, bool recursive) -> std::unique_ptr<ndarray_base> {
+        int input_cols;
+        auto eigen_coords = ndarray_to_eigen(coords, input_cols);
+        auto mask = rdp::douglas_simplify_mask(eigen_coords, epsilon, recursive);
+        return mask_to_ndarray(mask);
+    }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // Create pocket_numpy module that re-exports rdp/rdp_mask from numpy
+    {
+        py_GlobalRef pocket_numpy_mod = py_newmodule("pocket_numpy");
+        if (py_getattr(m.ptr(), py_name("rdp"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp"), py_retval());
+        }
+        if (py_getattr(m.ptr(), py_name("rdp_mask"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp_mask"), py_retval());
+        }
+    }
 }
