@@ -12,7 +12,7 @@ clean:
 
 PYTHON ?= python3
 build:
-	$(PYTHON) -m pip install scikit_build_core pyproject_metadata pathspec pybind11
+	$(PYTHON) -m pip install scikit_build_core pyproject_metadata pathspec 'pybind11>=2.12,<3'
 	CMAKE_BUILD_PARALLEL_LEVEL=$(NUM_JOB) $(PYTHON) -m pip install --no-build-isolation -Ceditable.rebuild=true -Cbuild-dir=build -ve.
 python_install:
 	$(PYTHON) -m pip install . --verbose

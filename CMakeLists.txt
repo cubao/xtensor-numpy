@@ -47,7 +47,7 @@ set(PK_BUILD_MODULE_LZ4 ON)
 set(PK_BUILD_STATIC_LIB ON)
 add_subdirectory(pocketpy ${CMAKE_CURRENT_BINARY_DIR}/__pocketpy__)
 
-include_directories(SYSTEM pocketpy/include include)
+include_directories(SYSTEM include)
 
 # Control xtensor warnings (OFF by default)
 option(SHOW_XTENSOR_WARNINGS "Show warnings from xtensor" OFF)
