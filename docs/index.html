@@ -16,15 +16,16 @@
     .editor-container {
       display: flex;
       width: 100%;
-      min-height: 400px;
       background-color: #282a36;
       border: 1px solid #444;
       border-radius: 6px;
       position: relative;
+      max-height: 90vh;
+      overflow: hidden;
     }
     .line-numbers {
-      width: 50px;
-      padding: 10px 8px 10px 5px;
+      min-width: 36px;
+      padding: 10px 6px 10px 4px;
       background-color: #1e1e1e;
       color: #858585;
       text-align: right;
@@ -33,15 +34,12 @@
       line-height: 1.4;
       border-right: 1px solid #444;
       user-select: none;
-      overflow-y: hidden;
-      overflow-x: hidden;
-      height: 100%;
+      overflow: hidden;
       box-sizing: border-box;
       white-space: pre;
     }
     #editor {
       flex: 1;
-      min-height: 400px;
       background-color: #282a36;
       color: #f8f8f2;
       border: none;
@@ -52,6 +50,7 @@
       tab-size: 4;
       resize: none;
       outline: none;
+      overflow-y: auto;
     }
     #run-btn {
       margin-top: 8px;
@@ -126,48 +125,46 @@
       document.getElementById('line-numbers').textContent = lineNumbers;
     }
 
+    // Auto-resize editor: min 3 lines, max 60vh
+    function autoResizeEditor() {
+      var lineHeight = 14 * 1.4; // font-size * line-height
+      var padding = 20; // top + bottom padding
+      var lineCount = editorEl.value.split('\n').length;
+      var minLines = 3;
+      var maxPx = window.innerHeight * 0.6;
+      var desiredHeight = Math.max(lineCount, minLines) * lineHeight + padding;
+      var finalHeight = Math.min(desiredHeight, maxPx);
+      editorEl.style.height = finalHeight + 'px';
+      var lineNumEl = document.getElementById('line-numbers');
+      lineNumEl.style.height = finalHeight + 'px';
+      // If content overflows, enable scroll sync
+      if (desiredHeight > maxPx) {
+        editorEl.style.overflowY = 'auto';
+        lineNumEl.style.overflowY = 'hidden';
+      } else {
+        editorEl.style.overflowY = 'hidden';
+        lineNumEl.style.overflowY = 'hidden';
+      }
+    }
+
     // Update line numbers on input and scroll
     editorEl.addEventListener('input', function() {
       updateLineNumbers();
-      syncLineNumbersHeight();
+      autoResizeEditor();
     });
-    
+
     editorEl.addEventListener('scroll', function() {
       document.getElementById('line-numbers').scrollTop = this.scrollTop;
     });
 
-    // Ensure line numbers height matches editor height
-    function syncLineNumbersHeight() {
-      var editorHeight = editorEl.scrollHeight;
-      document.getElementById('line-numbers').style.height = editorHeight + 'px';
-    }
-
-    // Initial line numbers and height sync
+    // Initial line numbers and auto-resize
     updateLineNumbers();
-    syncLineNumbersHeight();
+    autoResizeEditor();
 
-    // Sync height on window resize
+    // Re-calc on window resize
     window.addEventListener('resize', function() {
-      setTimeout(syncLineNumbersHeight, 100);
+      setTimeout(autoResizeEditor, 100);
     });
-
-    // Monitor editor changes for better synchronization
-    var observer = new MutationObserver(function() {
-      setTimeout(function() {
-        updateLineNumbers();
-        syncLineNumbersHeight();
-      }, 10);
-    });
-
-    // Observe changes to editor
-    if (window.MutationObserver) {
-      observer.observe(editorEl, {
-        attributes: true,
-        childList: true,
-        characterData: true,
-        subtree: true
-      });
-    }
 
     function runCode() {
       if (!ready) return;
