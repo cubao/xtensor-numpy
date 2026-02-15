@@ -11,7 +11,7 @@ assert ret.tolist() == [[0, 0], [10, 0]]
 ret = rdp(arr, epsilon=1.0 - 1e-6)
 assert ret.tolist() == arr
 
-arr = [[*xy, 0.0] for xy in arr]
+arr = [[xy[0], xy[1], 0.0] for xy in arr]
 ret = rdp(arr, epsilon=1.0)
 assert ret.tolist() == [[0, 0, 0], [10, 0, 0]]
 ret = rdp(arr, epsilon=1.0 - 1e-6)

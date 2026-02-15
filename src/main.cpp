@@ -80,6 +80,19 @@ int main(int argc, char** argv) {
 
     py_initialize();
     py_module_initialize();  // Register the numpy module
+
+    // Create pocket_numpy module that re-exports rdp/rdp_mask from numpy
+    {
+        py_GlobalRef numpy_mod = py_getmodule("numpy");
+        py_GlobalRef pocket_numpy_mod = py_newmodule("pocket_numpy");
+        if (py_getattr(numpy_mod, py_name("rdp"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp"), py_retval());
+        }
+        if (py_getattr(numpy_mod, py_name("rdp_mask"))) {
+            py_setattr(pocket_numpy_mod, py_name("rdp_mask"), py_retval());
+        }
+    }
+
     py_sys_setargv(argc, argv);
 
     if(compile) {
