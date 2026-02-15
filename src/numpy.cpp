@@ -3668,4 +3668,11 @@ PYBIND11_MODULE(numpy, m) {
         auto mask = rdp::douglas_simplify_mask(eigen_coords, epsilon, recursive);
         return mask_to_ndarray(mask);
     }, py::arg("coords"), py::arg("epsilon") = 0.0, py::arg("recursive") = true);
+
+    // Create pocket_numpy module that re-exports rdp/rdp_mask from numpy
+    {
+        py_GlobalRef pocket_numpy_mod = py_newmodule("pocket_numpy");
+        py_setattr(pocket_numpy_mod, py_name("rdp"), m.attr("rdp").ptr());
+        py_setattr(pocket_numpy_mod, py_name("rdp_mask"), m.attr("rdp_mask").ptr());
+    }
 }
